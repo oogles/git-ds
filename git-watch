@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+
+# status func
+
+watching=0
+branch=$(git symbolic-ref --short -q HEAD)
+
+# TODO: Keep a config file, including:
+output_path=".git/watch"
+max_diff_files=10
+
+# TODO: Keep a log
+
+case $1 in
+-h|--help)
+    echo "Show help"
+    ;;
+--start)
+    if [[ watching -eq 1 ]]; then
+        git watch
+        exit 0
+    fi
+
+    echo "Register hooks + cron"
+
+    # register hooks
+    # post-checkout:
+        # branch checkout: can't leave a branch with uncommitted changes (they'll follow you), so write a blank diff for the previous branch
+        # file checkout: update the diff to ensure it excludes the checked-out file
+    # post-commit: update the diff to ensure it excludes the files just committed
+        # does this run on git commit --amend?
+    # stash?
+        # no available hooks, will have to be a blind spot
+
+    # TODO: handle existing hooks
+    # TODO: register cron job
+        # configurable interval
+
+    ;;
+--stop)
+    if [[ watching -eq 0 ]]; then
+        echo "Repository is not currently being watched."
+        exit 0
+    fi
+
+    echo "Unregister hooks + cron"
+    ;;
+--run)
+    # TODO: Skip/queue if already processing
+
+    dir="$output_path/$branch"
+    mkdir -p "$dir"
+
+    diff=$({ git --no-pager diff HEAD; for next in $( git ls-files --others --exclude-standard ) ; do git --no-pager diff --no-index /dev/null $next; done; })
+
+    temp_file='.git/.watchtemp.patch'
+    echo "$diff" > "$temp_file"
+
+    count=$(ls -1 "$dir" | wc -l)
+    if [[ count -gt 0 ]]; then
+        # Get the most and least recent previous diff files
+        unset -v newest
+        unset -v oldest
+        for file in "$dir"/*; do
+            [[ "$file" -nt "$newest" ]] && newest="$file"
+            [[ -z "$oldest" || "$file" -ot "$oldest" ]] && oldest="$file"
+        done
+
+        # Only write a new file if this diff actually differs from the previous one
+        diff_comp=$(diff "$temp_file" "$newest")
+        if [[ ! "$diff_comp" ]]; then
+            exit 0;
+        fi
+
+        # Remove the oldest file if there are more than the configured max
+        # number of rotating files
+        if [[ "$count" -ge "$max_diff_files" ]]; then
+            rm "$oldest"
+        fi
+    fi
+
+    filename=$(date '+%Y%m%d-%H%M%S')
+    # TODO: Append an optional label that can be passed to "--run". Have hooks
+    # pass suitable labels, e.g. "commit", etc.
+    cp "$temp_file" "$dir/$filename.patch"
+
+    # TODO: Remove temp diff file (because it will be used to determine if an
+    #  operation is ongoing). Needs to happen even if exiting early. Maybe
+    #  encapsulate in a function and remove afterwards regardless of function
+    #  exit code. Can I detect that? Rather, don't use "exit" to terminate
+    #  the function.
+    ;;
+--clean)
+    echo "Clean diff files"
+    ;;
+*)
+    echo "Show status + statistics"
+    ;;
+esac
