@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
 # Constants
-TEMP_FILE='.git/.watchtemp.patch'
+TEMP_FILE='.git/.dstemp.patch'
 BRANCH=$(git symbolic-ref --short -q HEAD)
 
 # Configurable settings
-output_path='.git/watch'
+output_path='.git/ds'
 max_diff_files=10
 
 # TODO
@@ -50,7 +50,7 @@ function run() {
     output_path="$1"
     max_diff_files="$2"
 
-    dir="$output_path/$branch"
+    dir="$output_path/$BRANCH"
     mkdir -p "$dir"
 
     diff=$({ git --no-pager diff HEAD; for next in $( git ls-files --others --exclude-standard ) ; do git --no-pager diff --no-index /dev/null $next; done; })
@@ -93,7 +93,7 @@ case $1 in
     ;;
 --watch)
     if [[ watching -eq 1 ]]; then
-        git watch
+        git ds
         exit 0
     fi
 
