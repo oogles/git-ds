@@ -7,6 +7,7 @@ BRANCH=$(git symbolic-ref --short -q HEAD)
 # Configurable settings
 output_path='.git/ds'
 max_diff_files=10
+label=''
 
 # TODO
 watching=0
@@ -21,13 +22,15 @@ function get_option() {
     # Use the explicitly-provided value for the given option if provided
     while [[ $# -gt 0 ]]; do
         if [[ $1 = "$option" ]]; then
-            echo "FOUND: $2"
             case $1 in
             -o)
                 output_path="$2"
                 ;;
             -n)
                 max_diff_files="$2"
+                ;;
+            -l)
+                label="$2"
                 ;;
             *)
                 echo "Unknown option: $option"
@@ -49,6 +52,7 @@ function run() {
 
     local output_path="$1"
     local max_diff_files="$2"
+    local label="$3"
 
     local dir="$output_path/$BRANCH"
     mkdir -p "$dir"
@@ -81,8 +85,10 @@ function run() {
     fi
 
     local filename=$(date '+%Y%m%d-%H%M%S')
-    # TODO: Append an optional label that can be passed to "--run". Have hooks
-    # pass suitable labels, e.g. "commit", etc.
+    if [[ "$label" ]]; then
+        filename="$filename-$label"
+    fi
+
     cp "$TEMP_FILE" "$dir/$filename.patch"
 
 }
@@ -129,9 +135,10 @@ case $1 in
 
     get_option '-o' "$@"
     get_option '-n' "$@"
+    get_option '-l' "$@"
 
     # TODO: Accept label option
-    run "$output_path" "$max_diff_files"
+    run "$output_path" "$max_diff_files" "$label"
 
     # Always remove the temporary diff file, regardless of the outcome of run
     rm "$TEMP_FILE"
