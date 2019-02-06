@@ -1,18 +1,30 @@
 #!/usr/bin/env bash
 
+# Defaults for global settings
+output_path='.git/ds'
+max_diff_files=10
+
+# Update global settings with values from the config file, if any.
+# NOTE: Do this before creating any other variables used by the program, so
+# that a manually-modified config file can't be used to alter expected behaviour.
+if [[ -f .git/ds.cfg ]]; then
+    source .git/ds.cfg
+fi
+
 # Constants
 TEMP_FILE='.git/.dstemp.patch'
 BRANCH=$(git symbolic-ref --short -q HEAD)
 
-# Configurable settings
-output_path='.git/ds'
-max_diff_files=10
+# Other settings
 label=''
 
 # TODO
 watching=0
 
 # TODO: Keep a log
+
+subcommand="$1"
+shift  # move past subcommand argument
 
 function get_option() {
 
@@ -41,10 +53,6 @@ function get_option() {
 
         shift  # move to next item in argument list
     done
-
-    # The option was not explicitly provided... fall back to the default
-    # provided in the config file created by --watch
-    # TODO
 
 }
 
@@ -93,9 +101,45 @@ function run() {
 
 }
 
-case $1 in
+case "$subcommand" in
 -h|--help)
     echo "Show help"
+    ;;
+--config)
+    get_option '-o' "$@"
+    get_option '-n' "$@"
+
+    if [[ ! "$@" ]]; then
+        if [[ ! -f .git/ds.cfg ]]; then
+            echo "No config file found. Default settings:"
+        else
+            echo "Config file loaded. Settings:"
+        fi
+
+        echo "Output path: $output_path"
+        echo "Max. number of diff files per branch: $max_diff_files"
+    else
+        # TODO
+        printf "output_path='$output_path'\nmax_diff_files=$max_diff_files" > .git/ds.cfg
+        echo "Config file saved."
+    fi
+
+    ;;
+--run)
+    if [[ -f "$TEMP_FILE" ]]; then
+        echo "Diff already in progress."
+        exit 1
+    fi
+
+    get_option '-o' "$@"
+    get_option '-n' "$@"
+    get_option '-l' "$@"
+    echo "$max_diff_files"
+    # TODO: Accept label option
+    run "$output_path" "$max_diff_files" "$label"
+
+    # Always remove the temporary diff file, regardless of the outcome of run
+    rm "$TEMP_FILE"
     ;;
 --watch)
     if [[ watching -eq 1 ]]; then
@@ -126,22 +170,6 @@ case $1 in
     fi
 
     echo "Unregister hooks + cron"
-    ;;
---run)
-    if [[ -f "$TEMP_FILE" ]]; then
-        echo "Diff already in progress."
-        exit 1
-    fi
-
-    get_option '-o' "$@"
-    get_option '-n' "$@"
-    get_option '-l' "$@"
-
-    # TODO: Accept label option
-    run "$output_path" "$max_diff_files" "$label"
-
-    # Always remove the temporary diff file, regardless of the outcome of run
-    rm "$TEMP_FILE"
     ;;
 --clean)
     echo "Clean diff files"
