@@ -15,7 +15,7 @@ watching=0
 
 function get_option() {
 
-    option="$1"
+    local option="$1"
     shift  # move past target option in argument list
 
     # Use the explicitly-provided value for the given option if provided
@@ -47,18 +47,18 @@ function get_option() {
 
 function run() {
 
-    output_path="$1"
-    max_diff_files="$2"
+    local output_path="$1"
+    local max_diff_files="$2"
 
-    dir="$output_path/$BRANCH"
+    local dir="$output_path/$BRANCH"
     mkdir -p "$dir"
 
-    diff=$({ git --no-pager diff HEAD; for next in $( git ls-files --others --exclude-standard ) ; do git --no-pager diff --no-index /dev/null $next; done; })
+    local diff=$({ git --no-pager diff HEAD; for next in $( git ls-files --others --exclude-standard ) ; do git --no-pager diff --no-index /dev/null $next; done; })
 
     echo "$diff" > "$TEMP_FILE"
 
-    count=$(ls -1 "$dir" | wc -l)
-    if [[ count -gt 0 ]]; then
+    local count=$(ls -1 "$dir" | wc -l)
+    if [[ "$count" -gt 0 ]]; then
         # Get the most and least recent previous diff files
         unset -v newest
         unset -v oldest
@@ -68,7 +68,7 @@ function run() {
         done
 
         # Only write a new file if this diff actually differs from the previous one
-        diff_comp=$(diff "$TEMP_FILE" "$newest")
+        local diff_comp=$(diff "$TEMP_FILE" "$newest")
         if [[ ! "$diff_comp" ]]; then
             return
         fi
@@ -80,7 +80,7 @@ function run() {
         fi
     fi
 
-    filename=$(date '+%Y%m%d-%H%M%S')
+    local filename=$(date '+%Y%m%d-%H%M%S')
     # TODO: Append an optional label that can be passed to "--run". Have hooks
     # pass suitable labels, e.g. "commit", etc.
     cp "$TEMP_FILE" "$dir/$filename.patch"
