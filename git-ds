@@ -2,7 +2,7 @@
 
 # Defaults for global settings
 output_path='.git/ds'
-max_diff_files=10
+max_branch_diffs=10
 
 # Update global settings with values from the config file, if any.
 # NOTE: Do this before creating any other variables used by the program, so
@@ -11,56 +11,65 @@ if [[ -f .git/ds.cfg ]]; then
     source .git/ds.cfg
 fi
 
-# Constants
+# Defaults for per-execution settings
+label=''
+
+# TODO: Validate max_branch_diffs is integer - here and when retrieving the -n option in --config
+
+# Unconfigurable settings
 TEMP_FILE='.git/.dstemp.patch'
 BRANCH=$(git symbolic-ref --short -q HEAD)
-
-# Other settings
-label=''
 
 # TODO
 watching=0
 
 # TODO: Keep a log
 
-subcommand="$1"
-shift  # move past subcommand argument
+function show_help() {
+    echo "Show help"
+}
 
-function get_option() {
+function config() {
 
-    local option="$1"
-    shift  # move past target option in argument list
+    local options="$@"
 
-    # Use the explicitly-provided value for the given option if provided
+    # Get provided config options, overriding defaults
     while [[ $# -gt 0 ]]; do
-        if [[ $1 = "$option" ]]; then
-            case $1 in
-            -o)
-                output_path="$2"
-                ;;
-            -n)
-                max_diff_files="$2"
-                ;;
-            -l)
-                label="$2"
-                ;;
-            *)
-                echo "Unknown option: $option"
-                exit 1
-            esac
-            return
+        case $1 in
+        -o)
+            output_path="$2"
+            ;;
+        -n)
+            max_branch_diffs="$2"
+            ;;
+        *)
+            echo "Unknown option: $1. See git ds --help for usage examples."
+            exit 1
+        esac
+
+        shift  # move past option argument
+        shift  # move past value argument
+    done
+
+    if [[ ! "$options" ]]; then
+        if [[ ! -f .git/ds.cfg ]]; then
+            echo "No config file found. Default settings:"
+        else
+            echo "Config file loaded. Settings:"
         fi
 
-        shift  # move to next item in argument list
-    done
+        echo "Output path: $output_path"
+        echo "Max. number of diff files per branch: $max_branch_diffs"
+    else
+        printf "output_path='$output_path'\nmax_branch_diffs=$max_branch_diffs" > .git/ds.cfg
+        echo "Config file saved."
+    fi
 
 }
 
 function run() {
 
-    local output_path="$1"
-    local max_diff_files="$2"
-    local label="$3"
+    local label="$1"
 
     local dir="$output_path/$BRANCH"
     mkdir -p "$dir"
@@ -87,7 +96,7 @@ function run() {
 
         # Remove the oldest file if there are more than the configured max
         # number of rotating files
-        if [[ "$count" -ge "$max_diff_files" ]]; then
+        if [[ "$count" -ge "$max_branch_diffs" ]]; then
             rm "$oldest"
         fi
     fi
@@ -101,47 +110,8 @@ function run() {
 
 }
 
-case "$subcommand" in
--h|--help)
-    echo "Show help"
-    ;;
---config)
-    get_option '-o' "$@"
-    get_option '-n' "$@"
+function watch() {
 
-    if [[ ! "$@" ]]; then
-        if [[ ! -f .git/ds.cfg ]]; then
-            echo "No config file found. Default settings:"
-        else
-            echo "Config file loaded. Settings:"
-        fi
-
-        echo "Output path: $output_path"
-        echo "Max. number of diff files per branch: $max_diff_files"
-    else
-        # TODO
-        printf "output_path='$output_path'\nmax_diff_files=$max_diff_files" > .git/ds.cfg
-        echo "Config file saved."
-    fi
-
-    ;;
---run)
-    if [[ -f "$TEMP_FILE" ]]; then
-        echo "Diff already in progress."
-        exit 1
-    fi
-
-    get_option '-o' "$@"
-    get_option '-n' "$@"
-    get_option '-l' "$@"
-    echo "$max_diff_files"
-    # TODO: Accept label option
-    run "$output_path" "$max_diff_files" "$label"
-
-    # Always remove the temporary diff file, regardless of the outcome of run
-    rm "$TEMP_FILE"
-    ;;
---watch)
     if [[ watching -eq 1 ]]; then
         git ds
         exit 0
@@ -162,19 +132,81 @@ case "$subcommand" in
     # TODO: register cron job
         # configurable interval
 
-    ;;
---unwatch)
+}
+
+function unwatch() {
+
     if [[ watching -eq 0 ]]; then
         echo "Repository is not currently being watched."
         exit 0
     fi
 
     echo "Unregister hooks + cron"
+
+}
+
+function clean() {
+    echo "Clean diff files"
+}
+
+function status() {
+    echo "Show status + statistics"
+}
+
+# Execute the appropriate subcommand
+case "$1" in
+-h|--help)
+    shift  # move past subcommand option
+    show_help
+    ;;
+--config)
+    shift  # move past subcommand option
+    config "$@"  # pass the remaining options
+    ;;
+--run)
+    shift  # move past subcommand option
+
+    if [[ -f "$TEMP_FILE" ]]; then
+        echo "Diff already in progress."
+        exit 1
+    fi
+
+    # Get label, if any
+    unset label
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+        -l)
+            label="$2"
+            ;;
+        *)
+            echo "Unknown option: $1. See git ds --help for usage examples."
+            exit 1
+            ;;
+        esac
+
+        shift  # move past option argument
+        shift  # move past value argument
+    done
+
+    run "$label"
+
+    # Always remove the temporary diff file, regardless of the outcome of run
+    rm "$TEMP_FILE"
+    ;;
+--watch)
+    shift  # move past subcommand option
+    watch
+    ;;
+--unwatch)
+    shift  # move past subcommand option
+    unwatch
     ;;
 --clean)
-    echo "Clean diff files"
+    shift  # move past subcommand option
+    clean
     ;;
 *)
-    echo "Show status + statistics"
+    # no subcommand option, no shift
+    status
     ;;
 esac
