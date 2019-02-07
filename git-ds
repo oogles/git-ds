@@ -69,13 +69,34 @@ function config() {
 
 function run() {
 
-    local label="$1"
+    if [[ -f "$TEMP_FILE" ]]; then
+        echo "Diff already in progress."
+        exit 1
+    fi
+
+    # Get optional label, if any
+    local label=''
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+        -l)
+            label="$2"
+            ;;
+        *)
+            echo "Unknown option: $1. See git ds --help for usage examples."
+            exit 1
+            ;;
+        esac
+
+        shift  # move past option argument
+        shift  # move past value argument
+    done
 
     local dir="$output_path/$BRANCH"
     mkdir -p "$dir"
 
     local diff=$({ git --no-pager diff HEAD; for next in $( git ls-files --others --exclude-standard ) ; do git --no-pager diff --no-index /dev/null $next; done; })
 
+    # Write the diff to a temporary file
     echo "$diff" > "$TEMP_FILE"
 
     local count=$(ls -1 "$dir" | wc -l)
@@ -88,25 +109,27 @@ function run() {
             [[ -z "$oldest" || "$file" -ot "$oldest" ]] && oldest="$file"
         done
 
-        # Only write a new file if this diff actually differs from the previous one
         local diff_comp=$(diff "$TEMP_FILE" "$newest")
         if [[ ! "$diff_comp" ]]; then
-            return
-        fi
-
-        # Remove the oldest file if there are more than the configured max
-        # number of rotating files
-        if [[ "$count" -ge "$max_branch_diffs" ]]; then
+            # Only keep the file if this diff actually differs from the
+            # previous one
+            rm "$TEMP_FILE"
+        elif [[ "$count" -ge "$max_branch_diffs" ]]; then
+            # Remove the oldest file if there are more than the configured max
+            # number of rotating files for this branch
             rm "$oldest"
         fi
     fi
 
-    local filename=$(date '+%Y%m%d-%H%M%S')
-    if [[ "$label" ]]; then
-        filename="$filename-$label"
-    fi
+    if [[ -f "$TEMP_FILE" ]]; then
+        # Move the temporary file to a permanent location
+        local filename=$(date '+%Y%m%d-%H%M%S')
+        if [[ "$label" ]]; then
+            filename="$filename-$label"
+        fi
 
-    cp "$TEMP_FILE" "$dir/$filename.patch"
+        mv "$TEMP_FILE" "$dir/$filename.patch"
+    fi
 
 }
 
@@ -156,57 +179,26 @@ function status() {
 # Execute the appropriate subcommand
 case "$1" in
 -h|--help)
-    shift  # move past subcommand option
     show_help
     ;;
 --config)
     shift  # move past subcommand option
-    config "$@"  # pass the remaining options
+    config "$@"  # pass the remaining options through
     ;;
 --run)
     shift  # move past subcommand option
-
-    if [[ -f "$TEMP_FILE" ]]; then
-        echo "Diff already in progress."
-        exit 1
-    fi
-
-    # Get label, if any
-    unset label
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-        -l)
-            label="$2"
-            ;;
-        *)
-            echo "Unknown option: $1. See git ds --help for usage examples."
-            exit 1
-            ;;
-        esac
-
-        shift  # move past option argument
-        shift  # move past value argument
-    done
-
-    run "$label"
-
-    # Always remove the temporary diff file, regardless of the outcome of run
-    rm "$TEMP_FILE"
+    run "$@"  # pass the remaining options through
     ;;
 --watch)
-    shift  # move past subcommand option
     watch
     ;;
 --unwatch)
-    shift  # move past subcommand option
     unwatch
     ;;
 --clean)
-    shift  # move past subcommand option
     clean
     ;;
 *)
-    # no subcommand option, no shift
     status
     ;;
 esac
