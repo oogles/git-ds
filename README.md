@@ -6,11 +6,11 @@ A git command extension that saves a diff of all uncommitted changes (staged, un
 ## Installation
 
 1. Clone or download this repository.
-2. Make the git-ds file executable:
+2. Make the `git-ds` file executable:
 
     `chmod +x git-ds`
 
-3. Add git-ds to the system PATH, either by adding the repository directory to the PATH or by copying/linking the file from  somewhere already on the PATH.
+3. Add `git-ds` to the system `PATH`, either by adding the repository directory to the `PATH` or by copying/linking the file from  somewhere already on the `PATH`.
 
 After successful installation, a new command will be available in all git repositories on the system: `git ds`
 
@@ -64,3 +64,14 @@ Option | Default Value | Description
 `-n` | `10` | The maximum number of diff files to maintain per branch. Once more than this number of diff files are generated, the oldest files will be removed to make room for the new ones.
 
 Any number of these options can be passed to `--config` at the same time.
+
+## Why "ds"?
+
+What does "ds" stand for? Take your pick. Some of my favourites include:
+* diff save
+* diff store
+* diff share
+* diff sync
+* death star
+* disco snail
+* digital sausage
