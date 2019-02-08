@@ -19,11 +19,33 @@ label=''
 # Unconfigurable settings
 TEMP_FILE='.git/.dstemp.patch'
 BRANCH=$(git symbolic-ref --short -q HEAD)
+CRON_COMMAND=''
 
-# TODO
-watching=0
+# TODO: Keep a log?
 
-# TODO: Keep a log
+function set_cron_command() {
+
+    local git_ds_file=$( which git-ds )
+    if [[ ! "$git_ds_file" ]]; then
+        echo "git-ds must be available on the system PATH."
+        exit 1
+    fi
+
+    CRON_COMMAND="cd $PWD && $git_ds_file --run"
+
+}
+
+function has_cron() {
+
+    set_cron_command
+
+    if [[ $( crontab -l | grep -F "$CRON_COMMAND" ) ]]; then
+        return 0  # success (effectively true)
+    else
+        return 1  # failure (effectively false)
+    fi
+
+}
 
 function show_help() {
     echo "Show help"
@@ -135,36 +157,28 @@ function run() {
 
 function watch() {
 
-    if [[ watching -eq 1 ]]; then
-        git ds
-        exit 0
-    fi
+    set_cron_command
 
-    echo "Register hooks + cron"
+    # TODO: Allow configuring schedule
+    # TODO: Note that calling --watch again, when the repo is already being
+    #  watched, can serve to update the cronjob's schedule, if it has been
+    #  modified via --config
+    local job="*/5 * * * * $CRON_COMMAND"
 
-    # register hooks
-    # post-checkout:
-        # branch checkout: can't leave a branch with uncommitted changes (they'll follow you), so write a blank diff for the previous branch
-        # file checkout: update the diff to ensure it excludes the checked-out file
-    # post-commit: update the diff to ensure it excludes the files just committed
-        # does this run on git commit --amend?
-    # stash?
-        # no available hooks, will have to be a blind spot
-
-    # TODO: handle existing hooks
-    # TODO: register cron job
-        # configurable interval
+    # Add the cronjob, with no duplication, updating its schedule if it has
+    # been modified
+    ( crontab -l | grep -v -F "$CRON_COMMAND" ; echo "$job" ) | crontab -
 
 }
 
 function unwatch() {
 
-    if [[ watching -eq 0 ]]; then
+    if ! has_cron; then
         echo "Repository is not currently being watched."
-        exit 0
+    else
+        # Remove the cronjob, regardless of its schedule
+        ( crontab -l | grep -v -F "$CRON_COMMAND" ) | crontab -
     fi
-
-    echo "Unregister hooks + cron"
 
 }
 

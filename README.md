@@ -65,6 +65,21 @@ Option | Default Value | Description
 
 Any number of these options can be passed to `--config` at the same time.
 
+## Automation
+
+The generation of diff files can be automated using a periodic cronjob. This saves needing to remember to run the `--run` subcommand when necessary. The `--watch` subcommand can be used to create such a cronjob automatically:
+
+    git ds --watch
+
+By default, the cronjob will be scheduled to run every 5 minutes.
+
+Note that this level of automation is not absolute. Changes can be missed if they are made and then the working tree is reset (e.g. stashing, changing branches, etc) in the time between cronjob intervals.
+
+Once enabled, the cronjob can be disabled again using the `--unwatch` subcommand:
+
+    git ds --unwatch
+
+
 ## Why "ds"?
 
 What does "ds" stand for? Take your pick. Some of my favourites include:
