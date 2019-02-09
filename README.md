@@ -61,7 +61,7 @@ The available configuration options are:
 
 Option | Default Value | Description
 --- | --- | ---
-`-o` | `.git/ds` | The output directory. The directory to which branch subdirectories and diff files will be written.
+`-o` | `.git/ds` | The output directory, as an absolute path or relative to the repository root directory. This is the directory to which branch subdirectories and diff files will be written.
 `-n` | `10` | The maximum number of diff files to maintain per branch. Once more than this number of diff files are generated, the oldest files will be removed to make room for the new ones.
 
 Any number of these options can be passed to `--config` at the same time.
@@ -82,11 +82,11 @@ Option |  Description
 
 Examples:
 
-1. Every 15 minutes:
+* Every 15 minutes:
 
         git ds --watch -m 15
 
-2. Every 5 minutes during work hours:
+* Every 5 minutes during work hours:
 
         git ds --watch -s "*/5 8-18 * * 1-5"
 
