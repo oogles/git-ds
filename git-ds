@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# Ensure the current directory is a valid git repository
+if [[ ! -d .git ]] || ! git rev-parse --git-dir > /dev/null 2>&1; then
+    echo "Error: Not in the root directory of a valid git repository."
+    exit 1
+fi
+
 # Defaults for global settings
 output_path='.git/ds'
 max_branch_diffs=10

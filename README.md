@@ -12,7 +12,7 @@ A git command extension that saves a diff of all uncommitted changes (staged, un
 
 3. Add `git-ds` to the system `PATH`, either by adding the repository directory to the `PATH` or by copying/linking the file from  somewhere already on the `PATH`.
 
-After successful installation, a new command will be available in all git repositories on the system: `git ds`
+After successful installation, a new command will be available in all git repositories on the system: `git ds`. The command requires it be executed in the root directory of a valid git repository.
 
 
 ## File rotation
