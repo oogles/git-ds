@@ -46,6 +46,7 @@ The above command would generate a filename that looked something like:
 
     master/20190207-211436-special.patch
 
+
 ## Configuration
 
 Various aspects of the functionality provided by `git ds` can be customised. These settings can be configured once, via the `--config` subcommand, and will be respected by all subsequent commands.
@@ -65,6 +66,7 @@ Option | Default Value | Description
 
 Any number of these options can be passed to `--config` at the same time.
 
+
 ## Automation
 
 The generation of diff files can be automated using a periodic cronjob. This saves needing to remember to run the `--run` subcommand when necessary. The `--watch` subcommand can be used to create such a cronjob automatically:
@@ -78,6 +80,19 @@ Note that this level of automation is not absolute. Changes can be missed if the
 Once enabled, the cronjob can be disabled again using the `--unwatch` subcommand:
 
     git ds --unwatch
+
+
+## Status
+
+Details of currently saved diff files can be displayed by calling the command with no additional arguments:
+
+    git ds
+
+This will display:
+
+* An indication of whether or not the repository is being [watched](#automation).
+* The names of all branches for which there are saved diff files. Note: this may include branches that have since been deleted from the repository.
+* The number of saved diff files in each branch, and the modification timestamp of the most recent.
 
 
 ## Why "ds"?
