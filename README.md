@@ -73,9 +73,30 @@ The generation of diff files can be automated using a periodic cronjob. This sav
 
     git ds --watch
 
-By default, the cronjob will be scheduled to run every 5 minutes.
+By default, the cronjob will be scheduled to run every 5 minutes. The schedule can be configured by passing one of the following options:
 
-Note that this level of automation is not absolute. Changes can be missed if they are made and then the working tree is reset (e.g. stashing, changing branches, etc) in the time between cronjob intervals.
+Option |  Description
+--- | ---
+`-m` | The cronjob interval in minutes.
+`-s` | The full cronjob schedule, if a more complex schedule than "every X minutes" is required.
+
+Examples:
+
+1. Every 15 minutes:
+
+        git ds --watch -m 15
+
+2. Every 5 minutes during work hours:
+
+        git ds --watch -s "*/5 8-18 * * 1-5"
+
+Tip: Use [crontab.guru](https://crontab.guru/) to validate schedule strings.
+
+It is not valid to pass multiple scheduling options at once - only one of them will be used. Whichever is listed first will take precedence.
+
+The `--watch` subcommand can be re-run within a repository that is already being watched to alter its schedule.
+
+Note that this level of automation is not absolute. Even on an "every minute" schedule, changes can be missed if they are made and then the working tree is reset (e.g. stashing, changing branches, etc) in the time between cronjob intervals.
 
 Once enabled, the cronjob can be disabled again using the `--unwatch` subcommand:
 

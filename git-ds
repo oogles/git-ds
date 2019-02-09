@@ -165,18 +165,36 @@ function watch() {
 
     set_cron_command
 
-    # TODO: Allow configuring schedule
-    # TODO: Note that calling --watch again, when the repo is already being
-    #  watched, can serve to update the cronjob's schedule, if it has been
-    #  modified via --config
-    local schedule='*/5 * * * *'
+    # Get schedule
+    if [[ ! "$1" ]]; then
+        # No scheduling options provided
+        local schedule='*/5 * * * *'
+    else
+        # Scheduling options provided - only the first is considered, if
+        # multiple were provided
+        case $1 in
+        -s)
+            local schedule="$2"
+            ;;
+        -m)
+            local schedule="*/$2 * * * *"
+            ;;
+        *)
+            echo "Unknown option: $1. See git ds --help for usage examples."
+            exit 1
+            ;;
+        esac
+    fi
+
     local job="$schedule $CRON_COMMAND"
 
     # Add the cronjob, with no duplication, updating its schedule if it has
     # been modified
     ( crontab -l | grep -v -F "$CRON_COMMAND" ; echo "$job" ) | crontab -
 
-    echo "Started cronjob with schedule: $schedule"
+    if [[ "$?" -eq 0 ]]; then
+        echo "Started cronjob with schedule: $schedule"
+    fi
 
 }
 
@@ -250,7 +268,7 @@ case "$subcommand" in
     run "$@"  # pass the remaining options through
     ;;
 --watch)
-    watch
+    watch "$@"  # pass the remaining options through
     ;;
 --unwatch)
     unwatch
