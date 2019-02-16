@@ -21,12 +21,38 @@ fi
 label=''
 
 # TODO: Validate max_branch_diffs is integer - here and when retrieving the -n option in --config
+# TODO: Validate (or at least document) that output_path should NOT contain a trailing slash
 
 # Unconfigurable settings
 TEMP_FILE='.git/.dstemp.patch'
 CRON_COMMAND=''
 
 # TODO: Keep a log?
+
+function is_in() {
+
+    # https://stackoverflow.com/a/8574392/405174
+    local e match="$1"
+    shift
+    for e; do [[ "$e" == "$match" ]] && return 0; done
+    return 1
+
+}
+
+function branch_stats() {
+
+    local path="$1"
+    local branch=$( basename "$path" )
+    local count=$( ls -1 "$path" | wc -l )
+
+    local latest='n/a'
+    for file in "$path"/*; do
+        [[ "$file" -nt "$latest" ]] && latest=$( date -r "$file" '+%Y-%m-%d %H:%M:%S' )
+    done
+
+    echo "$branch ($count files, latest: $latest)"
+
+}
 
 function set_cron_command() {
 
@@ -210,7 +236,57 @@ function unwatch() {
 }
 
 function clean() {
-    echo "Clean diff files"
+
+    shopt -s nullglob  # handle empty directories nicely
+
+    # Get all current branches
+    current_branches=()
+    eval "$(git for-each-ref --shell --format='current_branches+=(%(refname))' refs/heads/)"
+
+    # Trim refs/heads/ from the branch names
+    for i in "${!current_branches[@]}"; do
+        branch="${current_branches[$i]}"
+        branch="${branch#refs/heads/}"
+        current_branches[$i]="$branch"
+    done
+
+    # Get all branches with saved diff data and filter them to those that are
+    # now obsolete
+    saved_branches=("$output_path"/*/)
+    obsolete_paths=()
+
+    for path in "${saved_branches[@]}"; do
+        # Extract branch name from path
+        branch=$( basename "$path" )
+
+        # Store the branch if it is no longer current
+        if ! is_in "$branch" "${current_branches[@]}"; then
+            obsolete_paths+=("$path")
+        fi
+    done
+
+    local count=${#obsolete_paths[@]}
+    if [[ "$count" -gt 0 ]]; then
+        echo "Saved diffs for $count obsolete branches found."
+        echo 'The following will be removed:'
+        for path in "${obsolete_paths[@]}"; do
+            # Show info about each obsolete branch
+            branch_stats "$path"
+        done
+
+        read -p "Are you sure? " -n 1 -r
+        echo  # move to new line
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            for path in "${obsolete_paths[@]}"; do
+                rm -rf "$path"
+            done
+        fi
+    else
+        echo 'No saved diffs for obsolete branches found.'
+    fi
+
+    shopt -u nullglob
+
 }
 
 function status() {
@@ -225,15 +301,7 @@ function status() {
     for path in "$output_path"/*; do
         [[ -d "$path" ]] || continue  # skip if not a directory
 
-        local branch=$( basename "$path" )
-        local count=$( ls -1 "$path" | wc -l )
-
-        local latest
-        for file in "$path"/*; do
-            [[ "$file" -nt "$latest" ]] && latest=$( date -r "$file" '+%Y-%m-%d %H:%M:%S' )
-        done
-
-        echo "$branch ($count files, latest: $latest)"
+        branch_stats "$path"
 
         tracked_branches=$((tracked_branches + 1))
     done

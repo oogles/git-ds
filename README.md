@@ -112,8 +112,17 @@ Details of currently saved diff files can be displayed by calling the command wi
 This will display:
 
 * An indication of whether or not the repository is being [watched](#automation).
-* The names of all branches for which there are saved diff files. Note: this may include branches that have since been deleted from the repository.
+* The names of all branches for which there are saved diff files. Note: this may include branches that have since been deleted from the repository. Obsolete diff files can be removed by running the [`--clean` subcommand](#cleaning)
 * The number of saved diff files in each branch, and the modification timestamp of the most recent.
+
+
+## Cleaning
+
+As branches are merged/abandoned and then deleted from the repository, saved diff files from earlier states of those branches will become obsolete. All obsolete files can be quickly and easily removed with the `--clean` subcommand:
+
+    git ds --clean
+
+This will display a report of the obsolete branches, details of the saved diff files that exist for them, and a confirmation prompt. If confirmed, it will delete all reported files.
 
 
 ## Why "ds"?
