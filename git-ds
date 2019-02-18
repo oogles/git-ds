@@ -269,24 +269,51 @@ function clean() {
 
     set_current_branches
 
-    # Get all branches with saved diff data and filter them to those that are
-    # now obsolete
-    saved_branches=("$output_path"/*/)
-    obsolete_paths=()
+    local obsolete_paths=()
+    local count=0
 
-    for path in "${saved_branches[@]}"; do
-        # Extract branch name from path
-        branch=$( basename "$path" )
+    # Get all branches with saved diff data
+    local saved_branches=("$output_path"/*/)
 
-        # Store the branch if it is no longer current
-        if ! is_in "$branch" "${CURRENT_BRANCHES[@]}"; then
-            obsolete_paths+=("$path")
+    if [[ ! "$1" ]]; then
+        # Filter branches to those that are now obsolete
+        for path in "${saved_branches[@]}"; do
+            # Extract branch name from path
+            branch=$( basename "$path" )
+
+            # Store the branch if it is no longer current
+            if ! is_in "$branch" "${CURRENT_BRANCHES[@]}"; then
+                obsolete_paths+=("$path")
+            fi
+        done
+
+        count=${#obsolete_paths[@]}
+        if [[ "$count" -gt 0 ]]; then
+            echo "Saved diffs for $count obsolete branches found."
+        else
+            echo 'No saved diffs for obsolete branches found.'
         fi
-    done
+    else
+        # Get the named branch to remove
+        case $1 in
+        -b)
+            local branch="$2"
+            local path="$output_path/$branch/"
+            if is_in "$path" "${saved_branches[@]}"; then
+                obsolete_paths+=("$path")
+                count=1
+            else
+                echo "No saved diffs for \"$branch\" found."
+            fi
+            ;;
+        *)
+            echo "Unknown option: $1. See git ds --help for usage examples."
+            exit 1
+            ;;
+        esac
+    fi
 
-    local count=${#obsolete_paths[@]}
     if [[ "$count" -gt 0 ]]; then
-        echo "Saved diffs for $count obsolete branches found."
         echo 'The following will be removed:'
         for path in "${obsolete_paths[@]}"; do
             # Show info about each obsolete branch
@@ -302,8 +329,6 @@ function clean() {
                 echo "Obsolete files removed."
             done
         fi
-    else
-        echo 'No saved diffs for obsolete branches found.'
     fi
 
     shopt -u nullglob
@@ -367,7 +392,7 @@ case "$subcommand" in
     unwatch
     ;;
 --clean)
-    clean
+    clean "$@"  # pass the remaining options through
     ;;
 *)
     echo "Unexpected option: $subcommand. See git ds --help for usage examples."

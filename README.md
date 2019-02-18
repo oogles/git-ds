@@ -124,6 +124,10 @@ As branches are merged/abandoned and then deleted from the repository, saved dif
 
 This will display a report of the obsolete branches, details of the saved diff files that exist for them, and a confirmation prompt. If confirmed, it will delete all reported files.
 
+A single named branch, obsolete or not, can also be removed:
+
+    git ds --clean -b my-branch
+
 
 ## Why "ds"?
 
