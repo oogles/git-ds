@@ -1,6 +1,6 @@
 # git-ds
 
-A git command extension that saves a diff of all uncommitted changes (staged, unstaged, and untracked) in the current working tree. This diff can then be shared/synced in order to pick up where you left off on a different machine, to pass the changes onto someone else for completion and commit, or any other reason you can think of.
+A git command extension for creating and managing diff files of all uncommitted changes (staged, unstaged, and untracked) in the current working tree. This diff can then be shared/synced in order to pick up where you left off on a different machine, to pass the changes onto someone else for completion and commit, or any other reason you can think of.
 
 
 ## Installation
@@ -40,11 +40,11 @@ This will write out a file containing the generated diff, per the constraints no
 
 In order to aid in the identification of specific diffs, a label can be appended to the default filename of the generated diff file. The label can be specified using the `-l` option:
 
-    git ds --run -l special
+    git ds --run -l leaving_work
 
 The above command would generate a filename that looked something like:
 
-    master/20190207-211436-special.patch
+    master/20190207-211436-leaving_work.patch
 
 
 ## Configuration

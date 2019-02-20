@@ -1,4 +1,76 @@
 #!/usr/bin/env bash
+#================================================================
+# HEADER
+#================================================================
+#% Usage: git ds [SUBCOMMAND] [OPTIONS]
+#%
+#% Create and manage diff files of all uncommitted changes in the current
+#% working tree. Uncommitted changes include those that are staged and
+#% unstaged, plus untracked files.
+#%
+#% SUBCOMMANDS
+#%   --config       View or store settings for the script's later use.
+#%
+#%       Run without options to view the currently configured settings.
+#%       Run with one or more of the following options to store them:
+#%         -o       The output directory - to which saved diff files will be
+#%                   written - as an absolute path or path relative to the
+#%                   repository root directory.
+#%         -n       The maximum number of saved diff files to maintain per
+#%                   branch.
+#%
+#%   --run          Create a new diff file based on the current working tree.
+#%
+#%       Can be run with the following option:
+#%         -l       A label to include in the name of the generated diff file.
+#%
+#%   --watch        Create or reschedule a cronjob to regularly trigger --run.
+#%                   Uses a 5-minute schedule by default.
+#%
+#%       Can be run with ONE of the following options:
+#%         -m       The cronjob interval in minutes.
+#%         -s       The full cronjob schedule, if a more complex schedule than
+#%                   "every X minutes" is required.
+#%
+#%   --unwatch      Stop/remove the cronjob created by --watch.
+#%
+#%   --clean        Remove saved diff files that have become obsolete (i.e.
+#%                   belong to deleted branches).
+#%
+#%       Can be run with the following option:
+#%         -b       The name of a branch to remove all saved diff files for,
+#%                   whether it is obsolete or not.
+#%
+#%   -h, --help     Display this help
+#%   -v, --version  Display version information
+#%
+#%   Run with no subcommand to display a report of all branches with saved
+#%   diff files, whether or not the branch is obsolete, how many diff files
+#%   have been saved for that branch and the timestamp of the most recently
+#%   saved file. It will also display whether or not the repository is
+#%   currently being watched.
+#%
+#% EXAMPLES
+#%   Configure the output directory for a repository:
+#%       git ds --config -o /home/me/diffs/my_repo
+#%
+#%   Create a saved diff file with a unique label:
+#%       git ds --run -l leaving_work
+#%
+#%   Watch the repository on a 15-minute interval:
+#%       git ds --watch -m 15
+#%
+#%   Watch the repository on a 5-minute interval during work hours:
+#%       git ds --watch -s "*/5 8-18 * * 1-5"
+#%
+#%   Display the current state of saved diff files for the repository:
+#%       git ds
+#%
+#% git-ds <https://github.com/oogles/git-ds>
+#+ v0.6a
+#================================================================
+# END_HEADER
+#================================================================
 
 # Ensure the current directory is a valid git repository
 if [[ ! -d .git ]] || ! git rev-parse --git-dir > /dev/null 2>&1; then
@@ -24,11 +96,10 @@ label=''
 # TODO: Validate (or at least document) that output_path should NOT contain a trailing slash
 
 # Unconfigurable settings
+HEAD_SIZE=$( head -200 "${0}" | grep -n "^# END_HEADER" | cut -f1 -d: )
 TEMP_FILE='.git/.dstemp.patch'
 CURRENT_BRANCHES=()
 CRON_COMMAND=''
-
-# TODO: Keep a log?
 
 #
 # Util functions
@@ -107,7 +178,15 @@ function has_cron() {
 #
 
 function show_help() {
-    echo "Show help"
+
+    head "-$HEAD_SIZE" "$1" | grep -e "^#[%+]" | sed -e "s/^#[%+] //g" -e "s/^#[%+]//g"
+
+}
+
+function show_version() {
+
+    head "-$HEAD_SIZE" "$1" | grep -e "^#+" | sed -e "s/^#+ v//g"
+
 }
 
 function config() {
@@ -377,7 +456,10 @@ shift  # move past subcommand option
 # Execute the appropriate subcommand
 case "$subcommand" in
 -h|--help)
-    show_help
+    show_help "${0}"  # pass the script file path
+    ;;
+-v|--version)
+    show_version "${0}"  # pass the script file path
     ;;
 --config)
     config "$@"  # pass the remaining options through
